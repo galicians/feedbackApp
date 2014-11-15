@@ -1,7 +1,11 @@
 var express = require('express');
 var app = express();
+var path = require('path')
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
+var twilio = require('twilio')
+var events = require('./lib/events')
+var utils = require('./lib/utils')
 var bodyParser = require('body-parser')
 
 var port = process.env.PORT || 5000
@@ -21,6 +25,61 @@ function init() {
     console.log("Server is listening on port " + port);
   })
 }
+
+
+app.post('/vote/sms', function(request, response) {
+    if (twilio.validateExpressRequest(request, config.twilio.key, {url: config.twilio.smsWebhook}) || config.disableTwilioSigCheck) {
+        response.header('Content-Type', 'text/xml');
+        var body = request.param('Body').trim();
+
+        // the number the vote it being sent to (this should match an Event)
+        var to = request.param('To');
+
+        // the voter, use this to keep people from voting more than once
+        var from = request.param('From');
+
+        events.findBy('phonenumber', to, function(err, event) {
+            if (err) {
+                console.log(err);
+                // silently fail for the user
+                response.send('<Response></Response>');
+            }
+            else if (event.state == "off") {
+                response.send('<Response><Sms>Voting is now closed.</Sms></Response>');
+            }
+            else if (!utils.testint(body)) {
+                console.log('Bad vote: ' + event.name + ', ' + from + ', ' + body);
+                response.send('<Response><Sms>Sorry, invalid vote. Please text a number between 1 and '+ event.voteoptions.length +'</Sms></Response>');
+            }
+            else if (utils.testint(body) && (parseInt(body) <= 0 || parseInt(body) > event.voteoptions.length)) {
+                console.log('Bad vote: ' + event.name + ', ' + from + ', ' + body + ', ' + ('[1-'+event.voteoptions.length+']'));
+                response.send('<Response><Sms>Sorry, invalid vote. Please text a number between 1 and '+ event.voteoptions.length +'</Sms></Response>');
+            }
+            else if (events.hasVoted(event, from)) {
+                console.log('Denying vote: ' + event.name + ', ' + from);
+                response.send('<Response><Sms>Sorry, you are only allowed to vote once.</Sms></Response>');
+            }
+            else {
+
+                var vote = parseInt(body);
+
+                events.saveVote(event, vote, from, function(err, res) {
+                    if (err) {
+                        response.send('<Response><Sms>We encountered an error saving your vote. Try again?</Sms></Response>');
+                    }
+                    else {
+                        console.log('Accepting vote: ' + event.name + ', ' + from);
+                        response.send('<Response><Sms>Thanks for your vote for ' + res.name + '. Powered by Twilio.</Sms></Response>');
+                    }
+                });
+            }
+        });
+    }
+    else {
+        response.statusCode = 403;
+        response.render('forbidden');
+    }
+})
 
 
 init();
