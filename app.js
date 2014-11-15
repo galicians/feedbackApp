@@ -7,10 +7,14 @@ var twilio = require('twilio')
 var events = require('./lib/events')
 var utils = require('./lib/utils')
 var bodyParser = require('body-parser')
+var config = require('./lib/config')
 
 var port = process.env.PORT || 5000
 
 app.use(express.static(__dirname + '/public'));
+
+app.engine('html', require('ejs').renderFile);
+app.set('view engine', 'html');
 
 app.use(bodyParser.urlencoded({ extended: false }))
 
@@ -28,7 +32,11 @@ function init() {
 
 
 app.post('/vote/sms', function(request, response) {
+
+    console.log(config.twilio.smsWebhook)
+    console.log( config.twilio.key)
     if (twilio.validateExpressRequest(request, config.twilio.key, {url: config.twilio.smsWebhook}) || config.disableTwilioSigCheck) {
+      console.log('inside of the if')
         response.header('Content-Type', 'text/xml');
         var body = request.param('Body').trim();
 
@@ -55,13 +63,9 @@ app.post('/vote/sms', function(request, response) {
                 console.log('Bad vote: ' + event.name + ', ' + from + ', ' + body + ', ' + ('[1-'+event.voteoptions.length+']'));
                 response.send('<Response><Sms>Sorry, invalid vote. Please text a number between 1 and '+ event.voteoptions.length +'</Sms></Response>');
             }
-            else if (events.hasVoted(event, from)) {
-                console.log('Denying vote: ' + event.name + ', ' + from);
-                response.send('<Response><Sms>Sorry, you are only allowed to vote once.</Sms></Response>');
-            }
             else {
 
-                var vote = parseInt(body);
+          var vote = parseInt(body);
 
                 events.saveVote(event, vote, from, function(err, res) {
                     if (err) {
@@ -69,7 +73,7 @@ app.post('/vote/sms', function(request, response) {
                     }
                     else {
                         console.log('Accepting vote: ' + event.name + ', ' + from);
-                        response.send('<Response><Sms>Thanks for your vote for ' + res.name + '. Powered by Twilio.</Sms></Response>');
+                        response.send('<Response><Sms>Thanks for your vote for ' + res.name + '. Powered by Makers Academy.</Sms></Response>');
                     }
                 });
             }
