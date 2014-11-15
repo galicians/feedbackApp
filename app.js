@@ -3,7 +3,10 @@ var app = express()
 var server = require('http').createServer(app)
 var io = require('socket.io')(server)
 
+var port = process.env.PORT || 5000
+
 app.use(express.static(__dirname + '/public'))
+
 
 
 app.get('/', function(req,res) {
@@ -13,8 +16,8 @@ app.get('/', function(req,res) {
 
 function init() {
 
-  server.listen(5000, function() {
-    console.log("the server is listening on port 5000")
+  server.listen(port, function() {
+    console.log("Server is listening on port " + port)
   })
 }
 
