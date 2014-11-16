@@ -13,26 +13,46 @@ var port = process.env.PORT || 5000
 
 app.use(express.static(__dirname + '/public'));
 
-app.engine('html', require('ejs').renderFile);
-app.set('view engine', 'html');
+app.set('views', __dirname + '/views');
+app.set('view engine', 'hjs');
 
 app.use(bodyParser.urlencoded({ extended: false }))
 
 app.get('/', function(req,res) {
-  res.sendFile(__dirname + '/views/index.html');
+  res.render('index', { title: 'Pablo feedbackApp'});
 })
 
 
 function init() {
+
+  setEventHandlers();
 
   server.listen(port, function() {
     console.log("Server is listening on port " + port);
   })
 }
 
+var setEventHandlers = function() {
+  io.on("connection", onSocketConnection);
+};
+
+function onSocketConnection(socket) {
+  console.log("New player connected" + socket.id)
+
+
+}
+
+io.sockets.on('connection', function(socket) {
+    socket.on('event', function(event) {
+      console.log(socket.id)
+        socket.join(event);
+    });
+});
+
+
 
 app.post('/vote/sms', function(request, response) {
-
+  console.log(request)
     console.log(config.twilio.smsWebhook)
     console.log( config.twilio.key)
     if (twilio.validateExpressRequest(request, config.twilio.key, {url: config.twilio.smsWebhook}) || config.disableTwilioSigCheck) {
@@ -84,6 +104,33 @@ app.post('/vote/sms', function(request, response) {
         response.render('forbidden');
     }
 })
+
+
+
+app.get('/events/:shortname', function(req, res){
+
+    events.findBy('shortname', req.params.shortname, function(err, event) {
+        if (event) {
+
+
+            res.render('event', {
+                name: event.name, shortname: event.shortname, state: event.state,
+                phonenumber: utils.formatPhone(event.phonenumber), voteoptions: JSON.stringify(event.voteoptions)
+            });
+        }
+        else {
+            res.statusCode = 404;
+            res.send('We could not locate your event');
+        }
+    });
+}
+)
+
+
+
+
+
+
 
 
 init();
