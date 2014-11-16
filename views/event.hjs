@@ -118,11 +118,11 @@
     });
 
       socket.on('vote', function(data) {
-      console.log('Incoming vote!', data);
-      vote = parseInt(data);
-      index = vote - 1;
-      votes = chart.series[0].data[index].y;
-      chart.series[0].data[index].update(votes+1);
+        console.log('Incoming vote!', data);
+        vote = parseInt(data);
+        index = vote - 1;
+        votes = chart.series[0].data[index].y;
+        chart.series[0].data[index].update(votes+1);
     });
 
     socket.on('connect', function() {

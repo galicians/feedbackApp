@@ -25,25 +25,23 @@ app.get('/', function(req,res) {
 
 function init() {
 
-  setEventHandlers();
+  // setEventHandlers();
 
   server.listen(port, function() {
     console.log("Server is listening on port " + port);
   })
 }
 
-var setEventHandlers = function() {
-  io.on("connection", onSocketConnection);
-};
-
-function onSocketConnection(socket) {
-  console.log("New player connected" + socket.id)
+// var setEventHandlers = function() {
+//   io.on("connection", onSocketConnection);
+// };
 
 
-}
 
 io.sockets.on('connection', function(socket) {
     socket.on('event', function(event) {
+      console.log("this is the event", event)
+      console.log('inside io.sockets.on')
       console.log(socket.id)
         socket.join(event);
     });
@@ -93,6 +91,7 @@ app.post('/vote/sms', function(request, response) {
                     }
                     else {
                         console.log('Accepting vote: ' + event.name + ', ' + from);
+                         io.sockets.in(event.shortname).emit('vote', vote);
                         response.send('<Response><Sms>Thanks for your vote for ' + res.name + '. Powered by Makers Academy.</Sms></Response>');
                     }
                 });
